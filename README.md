@@ -116,6 +116,8 @@ Wenn kein System-Chromium vorhanden ist, vorher `npx playwright install --with-d
 
 ## Production Setup
 
+Der vorbereitete Standardweg ist jetzt der [Render-Blueprint mit HTTPS, PostgreSQL und überwachten Prozessen](docs/DEPLOYMENT.md). Die vollständige Konfiguration liegt in `render.yaml`; die folgenden Wege bleiben Alternativen.
+
 ### Persistenter Node-Server (kleinster vollständiger Betriebsweg)
 
 1. Node.js 24, Build-Toolchain und das Repository auf einem persistenten Server bereitstellen.

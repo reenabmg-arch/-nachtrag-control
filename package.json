@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "start:managed": "node --env-file-if-exists=.env.local scripts/serve.mjs"
   },
   "repository": {
     "type": "git",

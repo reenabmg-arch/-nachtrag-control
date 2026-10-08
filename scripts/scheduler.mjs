@@ -1,4 +1,7 @@
-const origin = process.env.APP_ORIGIN || "http://localhost:3000";
+const origin =
+  process.env.SCHEDULER_ORIGIN ||
+  process.env.APP_ORIGIN ||
+  "http://localhost:3000";
 const secret = process.env.SCHEDULER_SECRET;
 if (!secret || secret.length < 32)
   throw new Error("SCHEDULER_SECRET must contain at least 32 characters.");

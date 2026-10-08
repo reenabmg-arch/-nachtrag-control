@@ -110,6 +110,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         await playerState(request.cookies.get("nc_player")?.value),
       );
+    if (path === "/api/ready") {
+      const healthy = await getStore().transact(
+        (state) =>
+          state.schedulerAt !== null && Date.now() - state.schedulerAt < 10000,
+      );
+      return NextResponse.json(
+        {
+          status: healthy ? "ok" : "starting",
+          database: "ok",
+          scheduler: healthy ? "ok" : "stale",
+        },
+        { status: healthy ? 200 : 503 },
+      );
+    }
     if (path === "/api/health") {
       await getStore().transact(() => true);
       return NextResponse.json({ status: "ok" });

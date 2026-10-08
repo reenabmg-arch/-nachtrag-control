@@ -1,0 +1,35 @@
+# One persistent web service with a supervised scheduler and private PostgreSQL.
+# Render displays the actual recurring price before resource creation.
+services:
+  - type: web
+    name: nachtrag-control
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run start:managed
+    healthCheckPath: /api/ready
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: HOST_SECRET
+        generateValue: true
+      - key: SCHEDULER_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nachtrag-db
+          property: connectionString
+# APP_ORIGIN is derived securely from Render's RENDER_EXTERNAL_URL.
+# For a custom domain, set APP_ORIGIN to that exact HTTPS origin.
+databases:
+  - name: nachtrag-db
+    plan: basic-256mb
+    region: frankfurt
+    databaseName: nachtrag
+    user: nachtrag
+    ipAllowList: []
