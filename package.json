@@ -1,0 +1,56 @@
+{
+  "name": "nachtrag-control",
+  "version": "1.0.0",
+  "description": "Private immersive experience control system",
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "setup": "node scripts/setup.mjs",
+    "seed": "node --env-file-if-exists=.env.local --import tsx scripts/seed.ts",
+    "scheduler": "node --env-file-if-exists=.env.local scripts/scheduler.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reenabmg-arch/-nachtrag-control.git"
+  },
+  "license": "UNLICENSED",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/reenabmg-arch/-nachtrag-control/issues"
+  },
+  "homepage": "https://github.com/reenabmg-arch/-nachtrag-control#readme",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "next": "^16.4.0",
+    "pg": "^8.23.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.4.0",
+    "@playwright/test": "^1.64.0",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.19.1",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=24.0.0 <25"
+  }
+}
