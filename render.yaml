@@ -1,10 +1,11 @@
-# One persistent web service with a supervised scheduler and private PostgreSQL.
-# Render displays the actual recurring price before resource creation.
+# Free test deployment. No paid service or Render database is created.
+# Supply a Neon Free PostgreSQL URL securely in Render, never in Git or chat.
+# Free hosting may sleep; this is not reliable hosting for timed live events.
 services:
   - type: web
     name: nachtrag-control
     runtime: node
-    plan: starter
+    plan: free
     region: frankfurt
     branch: main
     buildCommand: npm ci --include=dev && npm run build
@@ -21,15 +22,4 @@ services:
       - key: SCHEDULER_SECRET
         generateValue: true
       - key: DATABASE_URL
-        fromDatabase:
-          name: nachtrag-db
-          property: connectionString
-# APP_ORIGIN is derived securely from Render's RENDER_EXTERNAL_URL.
-# For a custom domain, set APP_ORIGIN to that exact HTTPS origin.
-databases:
-  - name: nachtrag-db
-    plan: basic-256mb
-    region: frankfurt
-    databaseName: nachtrag
-    user: nachtrag
-    ipAllowList: []
+        sync: false

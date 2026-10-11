@@ -1,5 +1,38 @@
 # HTTPS-Deployment — NACHTRAG Control
 
+## Aktueller Weg: kostenlose Testversion
+
+Auf Wunsch der Nutzerin ist `render.yaml` auf einen einzigen Render-Webservice
+mit `plan: free` umgestellt. Es wird keine Render-Datenbank erstellt. Die folgenden
+älteren Starter-/Basic-Anweisungen sind nicht mehr die aktuelle Konfiguration.
+
+1. Auf https://console.neon.tech registrieren, ein Projekt im **Free**-Plan
+   erstellen und möglichst Frankfurt als Region wählen. Kein kostenpflichtiges
+   Upgrade oder Zusatzangebot bestätigen.
+2. Unter **Connect** die PostgreSQL-Verbindungsadresse kopieren. Für diesen
+   langlebigen Server die direkte Verbindung (Pooling deaktiviert) verwenden.
+   Die TLS-Parameter der bereitgestellten Adresse beibehalten.
+3. Bei Render einen neuen Blueprint aus diesem Repository, Branch `main`,
+   Pfad `render.yaml` öffnen. Falls die alte Vorschau noch Starter und eine
+   Datenbank anzeigt, abbrechen und die Vorschau neu laden.
+4. Als Blueprint-Namen `NACHTRAG Test` eintragen. Render fragt `DATABASE_URL` ab:
+   dort die Neon-Adresse sicher einfügen, niemals im Chat posten.
+5. Vor der Erstellung prüfen: genau ein Webservice **Free**, keine Render-
+   Datenbank. Keine Zahlungsdaten oder Upgrades für diesen Weg bestätigen.
+6. Nach erfolgreichem Build die öffentliche HTTPS-Adresse mitteilen. Den
+   generierten `HOST_SECRET` nur in Render anzeigen und in `/control` verwenden.
+
+Kostenlose Kontingente gelten bei beiden Anbietern. Bei ausgeschöpftem Kontingent
+keine kostenpflichtigen Upgrades bestätigen. Render Free kann bei Inaktivität
+schlafen; Neon Free kann die Datenbank pausieren. Während der Server schläft,
+läuft der Scheduler nicht. Beim Aufwachen verarbeitet er fällige Ereignisse
+nachträglich. Die tatsächliche Wiederaufnahme und Provider-Kontingente müssen
+nach Veröffentlichung geprüft werden. Diese Variante ist für Tests, nicht als
+Zusage zuverlässiger Live-Zeitsteuerung. Die Daten bleiben in PostgreSQL und
+hängen nicht am flüchtigen Dateisystem von Render.
+
+## Bisheriger kostenpflichtiger Weg (historisch)
+
 Stand: 8. Oktober 2026. Der geprüfte Deployment-Weg verwendet Render: einen ständig laufenden Node-Webservice in Frankfurt, eine private PostgreSQL-Datenbank und den gemeinsam überwachten Scheduler. `render.yaml` enthält die vollständige Ressourcenkonfiguration. Render terminiert HTTPS automatisch an der bereitgestellten `onrender.com`-Adresse. Eine eigene Domain ist optional.
 
 **Noch nicht veröffentlicht:** Hier liegt kein Render-Konto-/API-Zugang vor. Die kostenpflichtigen Ressourcen werden erst nach deiner Bestätigung bei Render erzeugt. Die aktuell angezeigten Preise sind vor „Apply“ zu prüfen; es wurde kein Abo abgeschlossen.
