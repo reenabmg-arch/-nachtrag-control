@@ -3,7 +3,12 @@ import { Pool } from "pg";
 import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import { createRun, type Run, type Mode } from "../domain/engine";
+import {
+  createRun,
+  SCENARIO_VERSION,
+  type Run,
+  type Mode,
+} from "../domain/engine";
 export interface Access {
   hash: string;
   playerId: string;
@@ -46,6 +51,19 @@ export interface Store {
   transact<T>(fn: (state: Root) => T): Promise<T>;
   close(): Promise<void>;
 }
+function upgradeUnusedScenario(state: Root) {
+  for (const mode of ["test", "live"] as const) {
+    const current = state.runs[mode];
+    if (current.version === SCENARIO_VERSION || current.state !== "DRAFT")
+      continue;
+    state.history.push(current);
+    state.runs[mode] = createRun(mode, Date.now(), randomUUID());
+    state.access.forEach((access) => {
+      if (access.mode === mode && access.revokedAt === null)
+        access.revokedAt = Date.now();
+    });
+  }
+}
 export class SqliteStore implements Store {
   private db: Database.Database;
   constructor(path: string) {
@@ -67,6 +85,7 @@ export class SqliteStore implements Store {
           .prepare("SELECT data FROM control_state WHERE id=1")
           .get() as { data: string };
         const state = JSON.parse(row.data) as Root;
+        upgradeUnusedScenario(state);
         const result = fn(state);
         this.db
           .prepare(
@@ -121,6 +140,7 @@ export class PostgresStore implements Store {
         "SELECT data FROM control_state WHERE id=1 FOR UPDATE",
       );
       const state = result.rows[0].data;
+      upgradeUnusedScenario(state);
       const value = fn(state);
       await client.query(
         "UPDATE control_state SET data=$1::jsonb,revision=revision+1 WHERE id=1",

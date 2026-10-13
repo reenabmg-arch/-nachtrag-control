@@ -1,6 +1,6 @@
 # NACHTRAG Control — ENGINE
 
-Milestone 1 implementiert einen versionierten DEMO-Run mit RealClock/VirtualClock, PRE-FLIGHT, ARM, LIVE, PAUSE/RESUME, Anchors, Bestätigung, Choice-Branch, Override (fire/delay/skip), Safety, STOP und Test Reset. Alle Commands werden innerhalb einer Storage-Transaktion ausgewertet. STOP ist terminal; Reset erstellt eine neue Test-Generation. Live und Test sind getrennte Runs.
+Die Engine führt die versionierte Produktionsfassung `nachtrag-2026.10` mit RealClock/VirtualClock, PRE-FLIGHT, ARM, PRE_GAME, LIVE, FALSE_ENDING, REACTIVATING, FINAL_ACT, PAUSE/RESUME, Anchors, Bestätigung, Choice-Branch, Texteingabe, Override, Safety, STOP und Test Reset. Alle Commands werden innerhalb einer Storage-Transaktion ausgewertet. STOP ist terminal; Reset erstellt eine neue Test-Generation. Live und Test sind getrennte Runs.
 
 ## Vollständige zugeordnete Produktanforderungen
 

@@ -4,6 +4,13 @@ import { PostgresStore, fresh } from "../src/server/store";
 import { command, interact, tick, RealClock } from "../src/domain/engine";
 const url = process.env.PG_TEST_URL;
 const c = new RealClock();
+function enterEvening(r: Parameters<typeof command>[0]) {
+  for (const action of ["preflight", "arm", "start"] as const)
+    command(r, { action }, c, action, action, ["p1", "p2", "p3", "p4"]);
+  for (const [index, name] of ["reena", "janine", "jessy", "melle"].entries())
+    interact(r, `p${index + 1}`, `prelude-${name}`, "ack", c, `prelude-${name}`);
+  command(r, { action: "evening" }, c, "evening", "evening");
+}
 // This suite is opt-in and must only target a separate disposable test database.
 describe.skipIf(!url)("PostgreSQL production adapter (real database)", () => {
   beforeAll(async () => {
@@ -32,16 +39,16 @@ describe.skipIf(!url)("PostgreSQL production adapter (real database)", () => {
     await store.transact((s) => {
       Object.assign(s, fresh());
       const r = s.runs.test;
-      for (const action of ["preflight", "arm", "start"] as const)
-        command(r, { action }, c, action, action, ["p1", "p2", "p3", "p4"]);
-      command(r, { action: "advance", ms: 120000 }, c, "a", "a");
+      enterEvening(r);
+      command(r, { action: "advance", ms: 30 * 60_000 }, c, "a1", "a1");
+      command(r, { action: "advance", ms: 12 * 60_000 }, c, "a2", "a2");
       interact(r, "p2", "signal", "ack", c, "ack");
-      command(r, { action: "advance", ms: 30000 }, c, "b", "b");
+      command(r, { action: "advance", ms: 90_000 }, c, "b", "b");
     });
     await store.close();
     const reopened = new PostgresStore(url!);
     await reopened.transact((s) => {
-      expect(s.runs.test.interactions).toHaveLength(1);
+      expect(s.runs.test.interactions).toHaveLength(5);
       expect(s.runs.test.players[2].content?.eventId).toBe("choice");
       expect(s.runs.test.versionLocked).toBe(true);
       expect(s.runs.test.snapshots).toHaveLength(2);
@@ -61,9 +68,8 @@ describe.skipIf(!url)("PostgreSQL production adapter (real database)", () => {
       expect(s.runs.test.variables.invalid).toBeUndefined();
       Object.assign(s, fresh());
       const r = s.runs.test;
-      for (const action of ["preflight", "arm", "start"] as const)
-        command(r, { action }, c, action, action, ["p1", "p2", "p3", "p4"]);
-      r.virtualNow += 120000;
+      enterEvening(r);
+      r.virtualNow += 42 * 60_000;
     });
     await Promise.all(
       Array.from({ length: 25 }, (_, i) =>
@@ -72,7 +78,9 @@ describe.skipIf(!url)("PostgreSQL production adapter (real database)", () => {
     );
     await a.transact((s) =>
       expect(
-        s.runs.test.audit.filter((l) => l.action === "EVENT_DELIVERED"),
+        s.runs.test.audit.filter(
+          (l) => l.action === "EVENT_DELIVERED" && l.eventId === "signal",
+        ),
       ).toHaveLength(1),
     );
     await Promise.allSettled([

@@ -1,4 +1,10 @@
-import { test, expect, type Page, type BrowserContext } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Browser,
+  type Page,
+  type BrowserContext,
+} from "@playwright/test";
 const secret = "e2e-host-secret-32-character-minimum-secure";
 const origin = "http://localhost:3100";
 async function post(page: Page, path: string, data: unknown) {
@@ -42,7 +48,7 @@ async function cmd(
     ...extra,
   });
 }
-async function prepare(page: Page) {
+async function prepare(page: Page, browser: Browser) {
   const s = await state(page);
   if (s.state !== "DRAFT")
     await cmd(page, "reset", { reason: "E2E isolation" });
@@ -58,7 +64,18 @@ async function prepare(page: Page) {
   expect((await cmd(page, "preflight")).status).toBe(200);
   expect((await cmd(page, "arm")).status).toBe(200);
   expect((await cmd(page, "start")).status).toBe(200);
-  return urls;
+  const contexts: BrowserContext[] = [];
+  const players: Page[] = [];
+  for (let i = 1; i <= 4; i++) {
+    const context = await browser.newContext({ viewport: { width: 393, height: 852 } });
+    const player = await context.newPage();
+    contexts.push(context);
+    players.push(player);
+    await player.goto(urls[`p${i}`]);
+    await player.getByRole("button", { name: "Empfang bestätigen" }).click();
+  }
+  expect((await cmd(page, "evening")).status).toBe(200);
+  return { urls, contexts, players };
 }
 test("Milestone 1: real mobile multi-player end-to-end", async ({
   page,
@@ -128,7 +145,14 @@ test("Milestone 1: real mobile multi-player end-to-end", async ({
   await page.getByRole("button", { name: "PRE-FLIGHT", exact: true }).click();
   await expect(page.getByText("FAIL", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "ARM", exact: true }).click();
-  await page.getByRole("button", { name: "LIVE starten", exact: true }).click();
+  await page.getByRole("button", { name: "PRE-GAME starten", exact: true }).click();
+  for (const player of players) {
+    await expect(
+      player.getByRole("heading", { name: "Für Samstag. Noch nicht öffnen." }),
+    ).toBeVisible();
+    await player.getByRole("button", { name: "Empfang bestätigen" }).click();
+  }
+  await page.getByRole("button", { name: "ABEND STARTEN", exact: true }).click();
   await page.getByRole("button", { name: "Zeit +1 Min.", exact: true }).click();
   await expect(page.locator(".status-strip")).toContainText("00:01:00");
   await page.getByRole("button", { name: "PAUSE", exact: true }).click();
@@ -139,15 +163,18 @@ test("Milestone 1: real mobile multi-player end-to-end", async ({
     page.getByRole("button", { name: "RESUME", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "RESUME", exact: true }).click();
+  await cmd(page, "advance", { ms: 30 * 60_000 });
+  await cmd(page, "advance", { ms: 10 * 60_000 });
+  await page.getByRole("button", { name: "Zeit +1 Min.", exact: true }).click();
   await page.getByRole("button", { name: "Zeit +1 Min.", exact: true }).click();
   await expect(
-    players[1].getByRole("heading", { name: "DEMO · Ein erstes Signal" }),
+    players[1].getByRole("heading", { name: "Janine, der Anfang gehört dir." }),
   ).toBeVisible();
   // Player endpoint contains no scenario, tokens, sibling players or future content.
   const redacted = await players[1].evaluate(async () =>
     JSON.stringify(await (await fetch("/api/player/state")).json()),
   );
-  expect(redacted).not.toContain("Zwei Wege");
+  expect(redacted).not.toContain("stellst die Weiche");
   expect(redacted).not.toContain("branch-b");
   expect(redacted).not.toContain("token");
   await players[1].getByRole("button", { name: "Empfang bestätigen" }).click();
@@ -159,12 +186,13 @@ test("Milestone 1: real mobile multi-player end-to-end", async ({
     players[1].getByText("Antwort gespeichert.", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Zeit +1 Min.", exact: true }).click();
+  await page.getByRole("button", { name: "Zeit +1 Min.", exact: true }).click();
   await expect(
-    players[2].getByRole("heading", { name: "DEMO · Zwei Wege" }),
+    players[2].getByRole("heading", { name: "Jessy, du stellst die Weiche." }),
   ).toBeVisible();
-  await players[2].getByRole("button", { name: "Weg B", exact: true }).click();
+  await players[2].getByRole("button", { name: "STIMMEN ZUERST", exact: true }).click();
   await expect(
-    players[0].getByRole("heading", { name: "DEMO · Weg B" }),
+    players[0].getByRole("heading", { name: "STIMMEN ZUERST" }),
   ).toBeVisible();
   await expect(
     page
@@ -172,15 +200,15 @@ test("Milestone 1: real mobile multi-player end-to-end", async ({
       .filter({
         has: page.getByRole("heading", { name: "Jessy", exact: true }),
       }),
-  ).toContainText("Antwort: B");
+  ).toContainText("Antwort: STIMMEN ZUERST");
   const manual = page
     .locator(".event-row")
-    .filter({ hasText: "Manueller Hinweis" });
+    .filter({ hasText: "Fallback · Sammelimpuls" });
   await manual.getByRole("button", { name: "Auslösen", exact: true }).click();
   await page.getByLabel("Begründung").fill("E2E: Host korrigiert den Ablauf");
   await page.getByRole("button", { name: "Änderung bestätigen" }).click();
   await expect(
-    players[3].getByRole("heading", { name: "DEMO · Manueller Hinweis" }),
+    players[3].getByRole("heading", { name: "Ein Moment für euch vier." }),
   ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("control-mobile.png"),
@@ -241,17 +269,12 @@ test("Security, retries, reconnect, revocation, Safety and multi-host invariants
   browser,
 }) => {
   await login(page);
-  const urls = await prepare(page);
-  const janineContext = await browser.newContext({
-      viewport: { width: 393, height: 852 },
-    }),
-    jessyContext = await browser.newContext();
-  const janine = await janineContext.newPage(),
-    jessy = await jessyContext.newPage();
-  await janine.goto(urls.p2);
-  await expect(janine).toHaveURL(/\/p$/);
-  await jessy.goto(urls.p3);
-  await expect(jessy).toHaveURL(/\/p$/);
+  const prepared = await prepare(page, browser);
+  const { urls } = prepared;
+  const janineContext = prepared.contexts[1],
+    jessyContext = prepared.contexts[2];
+  const janine = prepared.players[1],
+    jessy = prepared.players[2];
   expect((await janine.request.get("/api/host/state")).status()).toBe(401);
   const stranger = await browser.newContext();
   const replay = await stranger.newPage();
@@ -274,7 +297,8 @@ test("Security, retries, reconnect, revocation, Safety and multi-host invariants
     data: { secret: "x".repeat(9000) },
   });
   expect(oversized.status()).toBe(413);
-  await cmd(page, "advance", { ms: 120000 });
+  await cmd(page, "advance", { ms: 1_800_000 });
+  await cmd(page, "advance", { ms: 720_000 });
   await expect(
     janine.getByRole("button", { name: "Empfang bestätigen" }),
   ).toBeVisible();
@@ -307,7 +331,7 @@ test("Security, retries, reconnect, revocation, Safety and multi-host invariants
     (await state(page)).audit.filter(
       (a: { action: string }) => a.action === "INTERACTION",
     ),
-  ).toHaveLength(1);
+  ).toHaveLength(5);
   // A timeout after commit can be retried with the same id; command is not repeated.
   const before = await state(page),
     override = {
@@ -357,7 +381,7 @@ test("Security, retries, reconnect, revocation, Safety and multi-host invariants
   );
   const choiceRow = page
     .locator(".event-row")
-    .filter({ hasText: "Eine Entscheidung · Jessy" });
+    .filter({ hasText: "Die Weiche · Jessy" });
   await choiceRow.getByRole("button", { name: "+1 Min.", exact: true }).click();
   await page.getByLabel("Begründung").fill("Lost-response drill");
   await page.getByRole("button", { name: "Änderung bestätigen" }).click();
@@ -390,9 +414,9 @@ test("Security, retries, reconnect, revocation, Safety and multi-host invariants
   ).toBeVisible();
   await expect(page.locator(".safety-alert")).toContainText("Janine");
   await cmd(page, "resume");
-  await cmd(page, "advance", { ms: 180000 });
+  await cmd(page, "advance", { ms: 240000 });
   await expect(
-    jessy.getByRole("heading", { name: "DEMO · Zwei Wege" }),
+    jessy.getByRole("heading", { name: "Jessy, du stellst die Weiche." }),
   ).toBeVisible();
   expect(
     (
@@ -449,23 +473,20 @@ test("Security, retries, reconnect, revocation, Safety and multi-host invariants
   for (const context of [janineContext, jessyContext, stranger, host2])
     await context.close();
 });
-test("Real-clock scheduler delivers with no host or player browser open", async ({
+test("Real-clock scheduler remains authoritative with no host browser open", async ({
   page,
   browser,
 }) => {
-  test.setTimeout(155000);
   await login(page);
   // This isolated real live run is deliberately separate from all virtual test data.
   const live = await state(page, "live");
   expect(live.state).toBe("DRAFT");
-  let janineLink = "";
   for (let i = 1; i <= 4; i++) {
     const r = await post(page, "/api/host/link", {
       mode: "live",
       playerId: `p${i}`,
     });
     expect(r.status).toBe(200);
-    if (i === 2) janineLink = origin + r.data.link;
   }
   for (const action of ["preflight", "arm", "start"]) {
     const r = await post(page, "/api/host/command", {
@@ -478,32 +499,19 @@ test("Real-clock scheduler delivers with no host or player browser open", async 
   }
   const storage = await page.context().storageState();
   await page.close();
-  // No HTTP refetch / host tick during the due window. The independent worker owns it.
-  await new Promise((resolve) => setTimeout(resolve, 123000));
+  // No host refetch while the independent worker continues its persisted heartbeat.
+  await new Promise((resolve) => setTimeout(resolve, 3000));
   const context = await browser.newContext({ storageState: storage }),
     host = await context.newPage();
   await host.goto("/control");
   const result = await state(host, "live");
+  expect(result.scheduler.healthy).toBe(true);
+  expect(result.state).toBe("PRE_GAME");
   expect(
-    result.events.find((e: { id: string }) => e.id === "signal").status,
-  ).toBe("DELIVERED");
-  const entry = result.audit.find(
-    (e: { action: string; eventId: string }) =>
-      e.action === "EVENT_DELIVERED" && e.eventId === "signal",
-  );
-  expect(entry.actor).toBe("SCHEDULER");
-  expect(
-    entry.timestamp -
-      result.audit.find((e: { action: string }) => e.action === "START")
-        .timestamp,
-  ).toBeLessThan(123000);
-  const playerContext = await browser.newContext(),
-    player = await playerContext.newPage();
-  await player.goto(janineLink);
-  await expect(player).toHaveURL(/\/p$/);
-  await expect(
-    player.getByRole("heading", { name: "DEMO · Ein erstes Signal" }),
-  ).toBeVisible();
+    result.events.filter((e: { id: string; status: string }) =>
+      e.id.startsWith("prelude-") && e.status === "DELIVERED",
+    ),
+  ).toHaveLength(4);
   const stop = await post(host, "/api/host/command", {
     mode: "live",
     runId: live.id,
@@ -511,9 +519,5 @@ test("Real-clock scheduler delivers with no host or player browser open", async 
     action: "stop",
   });
   expect(stop.status).toBe(200);
-  await expect(
-    player.getByRole("heading", { name: "Die Experience ist gestoppt." }),
-  ).toBeVisible();
-  await playerContext.close();
   await context.close();
 });

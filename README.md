@@ -2,7 +2,7 @@
 
 Privates Steuerungssystem für eine immersive Experience mit Reena, Janine, Jessy und Melle. Reena ist Host und Mitspielerin. Host Control ist Deutsch und für das iPhone ausgelegt.
 
-**Milestone 1** enthält einen tatsächlich ausführbaren DEMO-Durchlauf. Die DEMO ist keine endgültige NACHTRAG-Handlung. Das spätere Backlog (Editor, Display, Prelude, vollständige Trigger-/Action-Bibliothek, Snapshot Restore, externe Adapter) ist in [docs/ROADMAP.md](docs/ROADMAP.md) abgegrenzt. Es gibt dafür keine wirkungslosen Buttons.
+Der Milestone-1-Unterbau trägt jetzt die konkrete Produktionsfassung **„Das Protokoll, das noch fehlte“**: PRE-GAME, vier persönliche Spuren, Live-Abend, Branch, False Ending, Reaktivierung und gemeinsames Finale. Die Host-Regiegrundlage steht in [docs/EXPERIENCE.md](docs/EXPERIENCE.md). Das spätere Editor-/Adapter-Backlog bleibt in [docs/ROADMAP.md](docs/ROADMAP.md) abgegrenzt.
 
 ## Architektur
 
@@ -77,10 +77,10 @@ Ein kopierter Link ist ein Zugangsschlüssel. Nicht öffentlich teilen. Link-Wer
 [Reenas kurze Anleitung](docs/REENA-QUICKSTART.md) erklärt den Ablauf ohne Fachsprache.
 
 - Test und Live sind **getrennte persistente Runs**. Ein Test Reset verändert keine Live-Daten.
-- PRE-FLIGHT prüft vier Zugänge, Host-Auth, Datenbank, Scenario, Dependencies, Targets, Inhalte, Fallbacks, Safety und Version. Kritisches FAIL blockiert ARM. Scheduler und Geräteverbindung werden real geprüft bzw. als Warnung ausgewiesen; Audio ist in dieser Text-DEMO nicht nötig.
-- ARM friert die DEMO-Version des Runs ein. Es kann nicht direkt von DRAFT zu LIVE gewechselt werden.
+- PRE-FLIGHT prüft vier Zugänge, Host-Auth, Datenbank, Scenario, Dependencies, Targets, Inhalte, Fallbacks, Safety und Version. Kritisches FAIL blockiert ARM. Scheduler und Geräteverbindung werden real geprüft bzw. als Warnung ausgewiesen; Audio ist in dieser Textfassung nicht nötig.
+- ARM friert die Scenario-Version des Runs ein. Danach folgen bewusst PRE_GAME und LIVE; DRAFT kann nicht übersprungen werden.
 - LIVE setzt `SESSION_START`. Nach **2 Minuten Story-Zeit** erhält Janine das erste Signal.
-- Bestätigung persistiert Interaktion und `DEMO_ACK` atomar. **30 Sekunden später** erhält Jessy eine Auswahl A/B. Die Auswahl liefert den jeweiligen Abschluss an alle sicheren Player; der andere Branch wird cancelled.
+- Janines Bestätigung persistiert `JANINE_OPENED` atomar. Jessys Auswahl zwischen **SPUREN ZUERST** und **STIMMEN ZUERST** setzt `JESSY_CHOICE`, liefert die gewählte reale Aktion und bricht den anderen Pfad ab. Vier neue Texteingaben werden einzeln gespeichert; erst 4/4 geben das Finale frei.
 - Im Test Mode lässt sich die virtuelle Zeit um +1/+5/+30 Minuten vorspulen. Im Live Run gilt reale Serverzeit.
 - PAUSE friert die Story Clock und Automation ein. RESUME zieht die Pausendauer korrekt ab; Safety bleibt auch während der Pause verfügbar.
 

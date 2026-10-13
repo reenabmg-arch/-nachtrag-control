@@ -14,7 +14,8 @@ export default function PlayerPage() {
   const [state, setState] = useState<PlayerState | null>(null),
     [error, setError] = useState(""),
     [online, setOnline] = useState(true),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [text, setText] = useState("");
   const load = useCallback(async () => {
     try {
       const r = await fetch("/api/player/state", { cache: "no-store" });
@@ -27,6 +28,7 @@ export default function PlayerPage() {
       }
       if (!r.ok) throw new Error(d.error);
       setState(d);
+      setText("");
       setOnline(true);
     } catch (e) {
       setOnline(false);
@@ -91,11 +93,16 @@ export default function PlayerPage() {
     }
   }
   const safe = state?.safety || state?.state === "STOPPED";
+  const interactive =
+    !!state &&
+    ["PRE_GAME", "LIVE", "FALSE_ENDING", "REACTIVATING", "FINAL_ACT"].includes(
+      state.state,
+    );
   return (
     <main className={`player-page ${safe ? "safe" : ""}`}>
       <header>
         <span className="eyebrow">
-          {state?.mode === "test" ? "DEMO · TEST MODE" : "NACHTRAG"}
+          {state?.mode === "test" ? "NACHTRAG · TEST MODE" : "NACHTRAG"}
         </span>
         <span>{state?.name}</span>
       </header>
@@ -126,7 +133,7 @@ export default function PlayerPage() {
               <p className="receipt">Antwort gespeichert.</p>
             ) : state.content.interaction === "ack" ? (
               <button
-                disabled={busy || !online || state.state !== "LIVE"}
+                disabled={busy || !online || !interactive}
                 onClick={() => submit("ack")}
               >
                 Empfang bestätigen
@@ -136,13 +143,38 @@ export default function PlayerPage() {
                 {state.content.choices?.map((c) => (
                   <button
                     key={c}
-                    disabled={busy || !online || state.state !== "LIVE"}
+                    disabled={busy || !online || !interactive}
                     onClick={() => submit(c)}
                   >
-                    Weg {c}
+                    {c}
                   </button>
                 ))}
               </div>
+            ) : state.content.interaction === "text" ? (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void submit(text.trim());
+                }}
+              >
+                <label>
+                  {state.content.inputLabel || "Deine Antwort"}
+                  <textarea
+                    value={text}
+                    onChange={(event) => setText(event.target.value)}
+                    required
+                    maxLength={100}
+                    rows={3}
+                  />
+                </label>
+                <button
+                  disabled={
+                    busy || !online || state.state === "PAUSED" || !text.trim()
+                  }
+                >
+                  Satz verbindlich speichern
+                </button>
+              </form>
             ) : null}
           </>
         ) : (

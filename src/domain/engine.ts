@@ -1,5 +1,6 @@
 // This module intentionally has no React, network, database or environment dependencies.
 export const PLAYERS = ["Reena", "Janine", "Jessy", "Melle"] as const;
+export const SCENARIO_VERSION = "nachtrag-2026.10";
 export type Mode = "test" | "live";
 export type Lifecycle =
   | "DRAFT"
@@ -64,8 +65,9 @@ export interface Content {
   eventId: string;
   title: string;
   text: string;
-  interaction: "ack" | "choice" | "none";
+  interaction: "ack" | "choice" | "text" | "none";
   choices?: string[];
+  inputLabel?: string;
 }
 export interface Player {
   id: string;
@@ -161,7 +163,7 @@ export class DomainError extends Error {
   }
 }
 export function createRun(mode: Mode, now: number, id: string): Run {
-  const version = "demo-v1";
+  const version = SCENARIO_VERSION;
   const make = (
     eid: string,
     title: string,
@@ -175,8 +177,8 @@ export function createRun(mode: Mode, now: number, id: string): Run {
     stableKey: eid,
     experienceVersionId: version,
     title,
-    internalDescription: "Technische DEMO, keine endgültige NACHTRAG-Handlung.",
-    phaseId: "ACT_1",
+    internalDescription: "Produktionsfassung: Das Protokoll, das noch fehlte.",
+    phaseId: eid.startsWith("prelude") ? "PRELUDE" : "LIVE_EVENING",
     trigger,
     dependencies: deps,
     condition,
@@ -225,63 +227,195 @@ export function createRun(mode: Mode, now: number, id: string): Run {
     })),
     events: [
       make(
-        "signal",
-        "Erstes Signal · Janine",
-        ["p2"],
-        { type: "relative", anchor: "SESSION_START", offset: 120_000 },
+        "prelude-reena",
+        "Vorlauf · Reena / Bewahren",
+        ["p1"],
+        { type: "relative", anchor: "PRE_GAME_START", offset: 0 },
         {
-          title: "DEMO · Ein erstes Signal",
-          text: "Dies ist ein technischer Test. Bestätige den Empfang, um den nächsten Schritt freizuschalten.",
+          title: "Für Samstag. Noch nicht öffnen.",
+          text: "Schreibe von Hand genau einen Satz: Was von euch vier darf auf keinen Fall verloren gehen? Falte das Blatt zweimal, schreibe nur REENA außen darauf und bringe es am Samstag mit. Sprich mit niemandem über den Inhalt.",
+          interaction: "ack",
+        },
+      ),
+      make(
+        "prelude-janine",
+        "Vorlauf · Janine / Anfang",
+        ["p2"],
+        { type: "relative", anchor: "PRE_GAME_START", offset: 0 },
+        {
+          title: "Für Samstag. Noch nicht öffnen.",
+          text: "Schreibe von Hand genau einen Satz: Woran merkst du als Erste, dass aus einem normalen Abend etwas wird, das bleibt? Falte das Blatt zweimal, schreibe nur JANINE außen darauf und bringe es am Samstag mit. Sprich mit niemandem über den Inhalt.",
+          interaction: "ack",
+        },
+      ),
+      make(
+        "prelude-jessy",
+        "Vorlauf · Jessy / Weiche",
+        ["p3"],
+        { type: "relative", anchor: "PRE_GAME_START", offset: 0 },
+        {
+          title: "Für Samstag. Noch nicht öffnen.",
+          text: "Schreibe von Hand genau einen Satz: Welche kleine Entscheidung kann einen ganzen Abend in eine andere Richtung drehen? Falte das Blatt zweimal, schreibe nur JESSY außen darauf und bringe es am Samstag mit. Sprich mit niemandem über den Inhalt.",
+          interaction: "ack",
+        },
+      ),
+      make(
+        "prelude-melle",
+        "Vorlauf · Melle / Prüfen",
+        ["p4"],
+        { type: "relative", anchor: "PRE_GAME_START", offset: 0 },
+        {
+          title: "Für Samstag. Noch nicht öffnen.",
+          text: "Schreibe von Hand genau einen Satz: Woran erkennst du, dass eine Erinnerung wirklich euch allen gehört? Falte das Blatt zweimal, schreibe nur MELLE außen darauf und bringe es am Samstag mit. Sprich mit niemandem über den Inhalt.",
+          interaction: "ack",
+        },
+      ),
+      make(
+        "signal",
+        "Der Anfang · Janine",
+        ["p2"],
+        { type: "relative", anchor: "SESSION_START", offset: 42 * 60_000 },
+        {
+          title: "Janine, der Anfang gehört dir.",
+          text: "Vor vier Tagen habt ihr vier Spuren erzeugt. Deine fragte nach dem Anfang. Bitte Reena jetzt, den Umschlag in die Mitte zu legen. Legt alle vier gefalteten Blätter ungeöffnet nebeneinander. Bestätige erst, wenn alle vier sie sehen.",
           interaction: "ack",
         },
       ),
       make(
         "choice",
-        "Eine Entscheidung · Jessy",
+        "Die Weiche · Jessy",
         ["p3"],
-        { type: "relative", anchor: "DEMO_ACK", offset: 30_000 },
+        { type: "relative", anchor: "JANINE_OPENED", offset: 90_000 },
         {
-          title: "DEMO · Zwei Wege",
-          text: "Wähle einen Weg. Die Entscheidung wird auf dem Server gespeichert.",
+          title: "Jessy, du stellst die Weiche.",
+          text: "Deine Spur fragte nach der kleinen Entscheidung, die alles verändert. Entscheide jetzt, wie ihr die vier Sätze zum ersten Mal erlebt. Deine Auswahl ist verbindlich.",
           interaction: "choice",
-          choices: ["A", "B"],
+          choices: ["SPUREN ZUERST", "STIMMEN ZUERST"],
         },
         [{ eventId: "signal", status: "ACKNOWLEDGED" }],
       ),
       make(
         "branch-a",
-        "Finale · Weg A",
+        "Lesart · Spuren zuerst",
         PLAYERS.map((_, i) => `p${i + 1}`),
-        { type: "relative", anchor: "DEMO_CHOICE", offset: 0 },
+        { type: "relative", anchor: "JESSY_CHOICE", offset: 0 },
         {
-          title: "DEMO · Weg A",
-          text: "Weg A wurde gewählt. Der technische Durchlauf ist angekommen.",
+          title: "SPUREN ZUERST",
+          text: "Öffnet die Blätter in dieser Reihenfolge: Janine, Melle, Reena, Jessy. Lest alle vier Sätze 90 Sekunden lang schweigend. Achtet auf Handschrift, Faltungen und darauf, wem ihr welchen Satz zutraut. Sprecht erst danach.",
           interaction: "none",
         },
         [{ eventId: "choice", status: "ACKNOWLEDGED" }],
-        { type: "equals", key: "choice", value: "A" },
+        { type: "equals", key: "choice", value: "SPUREN ZUERST" },
       ),
       make(
         "branch-b",
-        "Finale · Weg B",
+        "Lesart · Stimmen zuerst",
         PLAYERS.map((_, i) => `p${i + 1}`),
-        { type: "relative", anchor: "DEMO_CHOICE", offset: 0 },
+        { type: "relative", anchor: "JESSY_CHOICE", offset: 0 },
         {
-          title: "DEMO · Weg B",
-          text: "Weg B wurde gewählt. Der technische Durchlauf ist angekommen.",
+          title: "STIMMEN ZUERST",
+          text: "Öffnet die Blätter, ohne die Namen zu zeigen. Lest die Sätze in dieser Reihenfolge vor: Jessy, Reena, Melle, Janine. Ordnet erst danach gemeinsam zu, welcher Satz von wem stammt.",
           interaction: "none",
         },
         [{ eventId: "choice", status: "ACKNOWLEDGED" }],
-        { type: "equals", key: "choice", value: "B" },
+        { type: "equals", key: "choice", value: "STIMMEN ZUERST" },
       ),
+      ...[
+        ["reena", "p1", "Du hast bewahrt, was später fehlen würde."],
+        ["janine", "p2", "Du hast den Anfang erkannt, bevor er einen Namen hatte."],
+        ["jessy", "p3", "Du hast die Richtung festgelegt; deshalb wirkte alles danach unvermeidlich."],
+        ["melle", "p4", "Du hast geprüft, was die anderen bereits für gemeinsam hielten."],
+      ].map(([name, player, line]) => {
+        const event = make(
+          `false-${name}`,
+          `False Ending · ${name}`,
+          [player],
+          { type: "relative", anchor: "JESSY_CHOICE", offset: 6 * 60_000 },
+          {
+            title: "PROTOKOLL 22:14 · VOLLSTÄNDIG",
+            text: `${line} Das Protokoll ist vollständig. Vergleicht jetzt eure Bildschirme.`,
+            interaction: "none",
+          },
+          [{ eventId: "choice", status: "ACKNOWLEDGED" }],
+        );
+        event.metadata.enterState = name === "reena" ? "FALSE_ENDING" : "";
+        return event;
+      }),
+      make(
+        "verify",
+        "Die Prüfung · Melle",
+        ["p4"],
+        { type: "relative", anchor: "JESSY_CHOICE", offset: 8 * 60_000 },
+        {
+          title: "Melle, prüfe 4/4.",
+          text: "Deine Spur fragte, wann eine Erinnerung wirklich allen gehört. Vier verschiedene Texte nennen sich vollständig. Das kann nicht gleichzeitig stimmen. Bestätige den Widerspruch, sobald ihr ihn gemeinsam benannt habt.",
+          interaction: "ack",
+        },
+        [
+          { eventId: "false-reena", status: "DELIVERED" },
+          { eventId: "false-janine", status: "DELIVERED" },
+          { eventId: "false-jessy", status: "DELIVERED" },
+          { eventId: "false-melle", status: "DELIVERED" },
+        ],
+      ),
+      (() => {
+        const event = make(
+          "reactivate",
+          "Reaktivierung · Reena",
+          ["p1"],
+          { type: "relative", anchor: "MELLE_VERIFIED", offset: 90_000 },
+          {
+            title: "Reena, bewahre nicht die falsche Version.",
+            text: "NACHTRAG hat die Zukunft nicht gekannt. Die vier Spuren haben nur Rollen verteilt: Anfang, Weiche, Prüfung, Bewahrung. Was fehlt, kann erst jetzt entstehen. Lege die alten Sätze in die Mitte und bestätige, wenn jede bereit ist, einen neuen zu schreiben.",
+            interaction: "ack",
+          },
+          [{ eventId: "verify", status: "ACKNOWLEDGED" }],
+        );
+        event.metadata.enterState = "REACTIVATING";
+        return event;
+      })(),
+      ...PLAYERS.map((name, index) =>
+        make(
+          `testimony-p${index + 1}`,
+          `Der fehlende Satz · ${name}`,
+          [`p${index + 1}`],
+          { type: "relative", anchor: "REENA_REACTIVATED", offset: 0 },
+          {
+            title: `${name}, schreibe den Nachtrag.`,
+            text: "Ein kurzer Satz, der vor diesem Abend noch nicht wahr sein konnte. Keine perfekte Formulierung — nur etwas, das erst jetzt entstanden ist.",
+            interaction: "text",
+            inputLabel: "Dein Satz",
+          },
+          [{ eventId: "reactivate", status: "ACKNOWLEDGED" }],
+        ),
+      ),
+      (() => {
+        const event = make(
+          "finale",
+          "Finale · 4/4",
+          PLAYERS.map((_, i) => `p${i + 1}`),
+          { type: "relative", anchor: "SESSION_START", offset: 0 },
+          {
+            title: "NACHTRAG · 4/4",
+            text: "Das hier war nicht vorher da. Vier Spuren konnten einen Abend vorbereiten. Erst vier Stimmen konnten ihn wahr machen. Bewahrt nicht dieses Protokoll. Bewahrt, dass ihr ihm widersprochen habt.",
+            interaction: "none",
+          },
+          PLAYERS.map((_, i) => ({
+            eventId: `testimony-p${i + 1}`,
+            status: "ACKNOWLEDGED" as const,
+          })),
+        );
+        event.metadata.enterState = "FINAL_ACT";
+        return event;
+      })(),
       make(
         "manual",
-        "Manueller Hinweis",
+        "Fallback · Sammelimpuls",
         PLAYERS.map((_, i) => `p${i + 1}`),
         { type: "manual" },
         {
-          title: "DEMO · Manueller Hinweis",
-          text: "Der Host hat diesen Hinweis bewusst ausgelöst.",
+          title: "Ein Moment für euch vier.",
+          text: "Legt die vier gefalteten Spuren in die Mitte. Atmet kurz durch. Reena führt euch zum nächsten bestätigten Schritt.",
           interaction: "none",
         },
       ),
@@ -357,7 +491,14 @@ export function validateEvents(events: StoryEvent[]): string[] {
       errors.push(`Fehlender Inhalt/Fallback ${e.id}`);
     if (
       e.trigger.type === "relative" &&
-      !["SESSION_START", "DEMO_ACK", "DEMO_CHOICE"].includes(e.trigger.anchor)
+      ![
+        "PRE_GAME_START",
+        "SESSION_START",
+        "JANINE_OPENED",
+        "JESSY_CHOICE",
+        "MELLE_VERIFIED",
+        "REENA_REACTIVATED",
+      ].includes(e.trigger.anchor)
     )
       errors.push(`Unerreichbarer Anchor ${e.id}`);
   });
@@ -395,7 +536,7 @@ export function preflight(run: Run, links: string[], now: number): Check[] {
       status: errors.length ? "FAIL" : "PASS",
       detail:
         errors.join("; ") ||
-        "DEMO v1: gültig, keine Zyklen, alle Inhalte vorhanden.",
+        "NACHTRAG 2026.10: gültig, keine Zyklen, alle Inhalte und Fallbacks vorhanden.",
     },
     {
       name: "Scheduler / Aktualisierung",
@@ -418,7 +559,7 @@ export function preflight(run: Run, links: string[], now: number): Check[] {
       name: "Audio / Assets",
       status: "PASS",
       detail:
-        "Diese DEMO verwendet nur Text, Bestätigung und Choice. Keine Audio-Voraussetzung.",
+        "Diese Fassung verwendet Text, Bestätigung, Choice und Texteingabe. Keine Audio-Voraussetzung.",
     },
   ];
 }
@@ -430,7 +571,12 @@ const final = new Set<EventStatus>([
   "CANCELLED",
 ]);
 export function tick(run: Run, clock: Clock, requestId = "scheduler") {
-  if (run.state !== "LIVE") return;
+  if (
+    !["PRE_GAME", "LIVE", "FALSE_ENDING", "REACTIVATING", "FINAL_ACT"].includes(
+      run.state,
+    )
+  )
+    return;
   const now = time(run, clock),
     elapsed = storyTime(run, now);
   for (const e of run.events) {
@@ -500,7 +646,11 @@ function fire(
   actor: string,
   requestId: string,
 ) {
-  if (run.state !== "LIVE" || final.has(e.status))
+  if (
+    !["PRE_GAME", "LIVE", "FALSE_ENDING", "REACTIVATING", "FINAL_ACT"].includes(
+      run.state,
+    ) || final.has(e.status)
+  )
     throw new DomainError("Event kann jetzt nicht ausgelöst werden.");
   if (
     !e.dependencies.every(
@@ -522,6 +672,12 @@ function fire(
   e.firedAt = now;
   e.updatedAt = now;
   e.source = actor === "HOST" ? "HOST" : "SYSTEM";
+  const entered = e.metadata.enterState;
+  if (
+    entered &&
+    ["FALSE_ENDING", "REACTIVATING", "FINAL_ACT"].includes(entered)
+  )
+    run.state = entered as Lifecycle;
   log(
     run,
     now,
@@ -537,6 +693,7 @@ export type Command = {
     | "preflight"
     | "arm"
     | "start"
+    | "evening"
     | "pause"
     | "resume"
     | "stop"
@@ -602,10 +759,27 @@ export function command(
         break;
       case "start":
         if (run.state !== "ARMED") throw new DomainError("Zuerst ARM.");
+        run.state = "PRE_GAME";
+        run.startedAt = now;
+        run.anchors.PRE_GAME_START = 0;
+        snapshot(run, now, "PRE-GAME START");
+        break;
+      case "evening":
+        if (run.state !== "PRE_GAME")
+          throw new DomainError("Der Abend kann nur aus PRE_GAME starten.");
+        if (
+          run.events
+            .filter((e) => e.id.startsWith("prelude-"))
+            .some((e) => e.status !== "ACKNOWLEDGED")
+        )
+          throw new DomainError(
+            "Alle vier Vorab-Spuren müssen zuerst bestätigt sein.",
+          );
         run.state = "LIVE";
         run.startedAt = now;
+        run.pausedTotal = 0;
         run.anchors.SESSION_START = 0;
-        snapshot(run, now, "LIVE START");
+        snapshot(run, now, "LIVE EVENING START");
         break;
       case "pause":
         if (run.state !== "LIVE")
@@ -631,7 +805,9 @@ export function command(
       case "delay":
       case "skip": {
         if (
-          run.state !== "LIVE" &&
+          !["PRE_GAME", "LIVE", "FALSE_ENDING", "REACTIVATING", "FINAL_ACT"].includes(
+            run.state,
+          ) &&
           !(cmd.action !== "fire" && run.state === "PAUSED")
         )
           throw new DomainError(
@@ -688,7 +864,11 @@ export function interact(
   const now = time(run, clock),
     player = run.players.find((p) => p.id === playerId);
   if (!player) throw new DomainError("Player nicht gefunden.", 404);
-  if (run.state !== "LIVE" || player.safety)
+  if (
+    !["PRE_GAME", "LIVE", "FALSE_ENDING", "REACTIVATING", "FINAL_ACT"].includes(
+      run.state,
+    ) || player.safety
+  )
     throw new DomainError("Interaktion ist jetzt gesperrt.");
   const existing = run.interactions.find(
     (i) => i.playerId === playerId && i.eventId === eventId,
@@ -707,6 +887,8 @@ export function interact(
     throw new DomainError("Ungültige Bestätigung.", 400);
   if (e.content.interaction === "choice" && !e.content.choices?.includes(value))
     throw new DomainError("Ungültige Auswahl.", 400);
+  if (e.content.interaction === "text" && !value.trim())
+    throw new DomainError("Bitte einen Satz eingeben.", 400);
   if (e.content.interaction === "none")
     throw new DomainError("Keine Antwort vorgesehen.", 400);
   run.interactions.push({ key, playerId, eventId, value, timestamp: now });
@@ -714,11 +896,16 @@ export function interact(
   e.acknowledgedAt = now;
   player.lastInteraction = value;
   player.content = { ...player.content, interaction: "none" };
-  if (eventId === "signal") run.anchors.DEMO_ACK = storyTime(run, now);
+  if (eventId === "signal")
+    run.anchors.JANINE_OPENED = storyTime(run, now);
   if (eventId === "choice") {
-    run.anchors.DEMO_CHOICE = storyTime(run, now);
+    run.anchors.JESSY_CHOICE = storyTime(run, now);
     run.variables.choice = value;
   }
+  if (eventId === "verify")
+    run.anchors.MELLE_VERIFIED = storyTime(run, now);
+  if (eventId === "reactivate")
+    run.anchors.REENA_REACTIVATED = storyTime(run, now);
   log(run, now, "PLAYER", "INTERACTION", value, key, { eventId, playerId });
   tick(run, clock, key);
 }

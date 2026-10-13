@@ -27,6 +27,7 @@ export const commandSchema = z
       "preflight",
       "arm",
       "start",
+      "evening",
       "pause",
       "resume",
       "stop",

@@ -7,6 +7,7 @@ type Action =
   | "preflight"
   | "arm"
   | "start"
+  | "evening"
   | "pause"
   | "resume"
   | "stop"
@@ -310,7 +311,7 @@ export default function Control() {
             </span>
             <h1>Der Abend. Unter Kontrolle.</h1>
             <p>
-              DEMO Scenario · {view.version}{" "}
+              Das Protokoll, das noch fehlte · {view.version}{" "}
               {view.versionLocked ? "· Version eingefroren" : ""}
             </p>
           </div>
@@ -328,8 +329,8 @@ export default function Control() {
                 setError("");
               }}
             >
-              <option value="test">DEMO · TEST MODE</option>
-              <option value="live">DEMO · LIVE RUN</option>
+              <option value="test">NACHTRAG · TEST MODE</option>
+              <option value="live">NACHTRAG · LIVE RUN</option>
             </select>
           </label>
         </div>
@@ -407,8 +408,10 @@ export default function Control() {
               <section className="panel now">
                 <span className="eyebrow">NOW</span>
                 <h2>
-                  {view.state === "LIVE"
+                  {["LIVE", "FALSE_ENDING", "REACTIVATING", "FINAL_ACT"].includes(view.state)
                     ? "Die Engine führt. Du bleibst dabei."
+                    : view.state === "PRE_GAME"
+                      ? "Vier Spuren entstehen vor dem Abend."
                     : view.state === "PAUSED"
                       ? "Ein Moment Ruhe."
                       : view.state === "STOPPED"
@@ -416,8 +419,10 @@ export default function Control() {
                         : "Bereit für den ersten Impuls."}
                 </h2>
                 <p>
-                  {view.state === "LIVE"
+                  {["LIVE", "FALSE_ENDING", "REACTIVATING", "FINAL_ACT"].includes(view.state)
                     ? "Zeit, Inhalte und Antworten werden serverseitig zusammengeführt."
+                    : view.state === "PRE_GAME"
+                      ? "Alle vier Vorab-Aufträge müssen bestätigt sein, bevor der gemeinsame Abend startet."
                     : view.state === "PAUSED"
                       ? "Die Story Clock ist eingefroren. Safety bleibt erreichbar."
                       : "Vier persönliche Zugänge einrichten, Pre-flight prüfen und bewusst starten."}
@@ -447,7 +452,16 @@ export default function Control() {
                       disabled={busy || !online}
                       onClick={() => act("start")}
                     >
-                      LIVE starten
+                      PRE-GAME starten
+                    </button>
+                  )}
+                  {view.state === "PRE_GAME" && (
+                    <button
+                      className="primary"
+                      disabled={busy || !online}
+                      onClick={() => act("evening")}
+                    >
+                      ABEND STARTEN
                     </button>
                   )}
                   {view.state === "LIVE" && (
@@ -721,7 +735,19 @@ export default function Control() {
                     setTab("live");
                   }}
                 >
-                  LIVE starten
+                  PRE-GAME starten
+                </button>
+              )}
+              {view.state === "PRE_GAME" && (
+                <button
+                  className="primary"
+                  disabled={busy || !online}
+                  onClick={() => {
+                    void act("evening");
+                    setTab("live");
+                  }}
+                >
+                  ABEND STARTEN
                 </button>
               )}
             </div>

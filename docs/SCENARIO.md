@@ -1,22 +1,22 @@
-# Scenario-Format und Versionen
+# Serverseitiges Scenario
 
-Milestone 1 lädt die serverseitige unveränderliche technische Version `demo-v1` aus `createRun()` in `src/domain/engine.ts`. Player erhalten davon ausschließlich ihren aktuell erlaubten Content. ARM sperrt diese Version im Run. Die Runtime speichert Eventstatus, Anchors, Variables, Clock und Interaktionen getrennt vom Host-Client.
+Die unveränderliche Produktionsfassung heißt `nachtrag-2026.10` und wird in
+`createRun()` aus `src/domain/engine.ts` geladen. Die vollständige dramaturgische
+Regiegrundlage steht in [EXPERIENCE.md](EXPERIENCE.md). Player erhalten weiterhin
+nur den gerade für sie freigegebenen Inhalt.
 
-Das folgende Exportformat ist die verbindliche Arbeitsgrundlage für **Milestone 2**, noch keine behauptete Import-/Export-Funktion:
+## Phasen und Anker
 
-```json
-{
-  "schema_version": 1,
-  "experience": { "stable_key": "nachtrag-demo", "title": "DEMO", "timezone": "Europe/Berlin" },
-  "version": "demo-v1",
-  "phases": [{ "id": "ACT_1", "order": 1, "enabled": true }],
-  "events": [],
-  "conditions": [],
-  "dependencies": [],
-  "story_variables": [],
-  "content": [],
-  "asset_references": []
-}
-```
+1. `PRE_GAME_START`: vier individuelle Schreibspuren werden ausgeliefert.
+2. `SESSION_START`: Reena startet den gemeinsamen Abend; 42 Minuten Normalität.
+3. `JANINE_OPENED`: Janine bestätigt die vier sichtbaren Papier-Spuren.
+4. `JESSY_CHOICE`: SPUREN ZUERST oder STIMMEN ZUERST verändert die reale
+   Lesereihenfolge; der andere Pfad wird atomar abgebrochen.
+5. `FALSE_ENDING`: vier unterschiedliche vollständige Protokolle erscheinen.
+6. `MELLE_VERIFIED`: Melle bestätigt den gemeinsamen Widerspruch.
+7. `REENA_REACTIVATED`: Reena öffnet die vier neuen Texteingaben.
+8. `FINAL_ACT`: erst vier bestätigte Sätze geben das gemeinsame Finale frei.
 
-Die Events benötigen sämtliche in `docs/ENGINE.md` Abschnitt 16 genannten Definitionsfelder. Persistierte Runtime-Felder (`status`, Claim, Timestamps, Execution, Request-Receipt) werden bei einem späteren Scenario-Export von Definitionen getrennt. Import muss mit Zod alle Felder, Referenzen, Targets, Zyklen, Trigger, Asset-Verfügbarkeit und Schema-Version prüfen. Alte Schema-Versionen brauchen explizite Migrationen; keine stillen Datenverluste. Ein bearbeitetes Scenario erstellt eine neue Draft-Version und verändert keinen bewaffneten oder laufenden Run.
+Test und Live besitzen weiterhin getrennte, persistente Runs. Ein unbenutzter
+`DRAFT` einer älteren Scenario-Version wird archiviert und sicher ersetzt. Ein
+laufender, gestoppter oder historischer Run wird bei Deployments nicht verändert.
