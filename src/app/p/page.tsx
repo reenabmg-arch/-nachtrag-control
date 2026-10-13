@@ -10,12 +10,54 @@ interface PlayerState {
   content: Content | null;
   acknowledged: boolean;
 }
+function TextInteraction({
+  content,
+  busy,
+  online,
+  paused,
+  submit,
+}: {
+  content: Content;
+  busy: boolean;
+  online: boolean;
+  paused: boolean;
+  submit: (value: string) => Promise<void>;
+}) {
+  const draftKey = `nachtrag:draft:${content.eventId}`;
+  const [text, setText] = useState(() =>
+    typeof window === "undefined" ? "" : sessionStorage.getItem(draftKey) || "",
+  );
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit(text.trim());
+      }}
+    >
+      <label>
+        {content.inputLabel || "Deine Antwort"}
+        <textarea
+          value={text}
+          onChange={(event) => {
+            setText(event.target.value);
+            sessionStorage.setItem(draftKey, event.target.value);
+          }}
+          required
+          maxLength={100}
+          rows={3}
+        />
+      </label>
+      <button disabled={busy || !online || paused || !text.trim()}>
+        Satz verbindlich speichern
+      </button>
+    </form>
+  );
+}
 export default function PlayerPage() {
   const [state, setState] = useState<PlayerState | null>(null),
     [error, setError] = useState(""),
     [online, setOnline] = useState(true),
-    [busy, setBusy] = useState(false),
-    [text, setText] = useState("");
+    [busy, setBusy] = useState(false);
   const load = useCallback(async () => {
     try {
       const r = await fetch("/api/player/state", { cache: "no-store" });
@@ -28,7 +70,6 @@ export default function PlayerPage() {
       }
       if (!r.ok) throw new Error(d.error);
       setState(d);
-      setText("");
       setOnline(true);
     } catch (e) {
       setOnline(false);
@@ -151,30 +192,14 @@ export default function PlayerPage() {
                 ))}
               </div>
             ) : state.content.interaction === "text" ? (
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void submit(text.trim());
-                }}
-              >
-                <label>
-                  {state.content.inputLabel || "Deine Antwort"}
-                  <textarea
-                    value={text}
-                    onChange={(event) => setText(event.target.value)}
-                    required
-                    maxLength={100}
-                    rows={3}
-                  />
-                </label>
-                <button
-                  disabled={
-                    busy || !online || state.state === "PAUSED" || !text.trim()
-                  }
-                >
-                  Satz verbindlich speichern
-                </button>
-              </form>
+              <TextInteraction
+                key={`${state.runId}:${state.content.eventId}`}
+                content={state.content}
+                busy={busy}
+                online={online}
+                paused={state.state === "PAUSED"}
+                submit={submit}
+              />
             ) : null}
           </>
         ) : (

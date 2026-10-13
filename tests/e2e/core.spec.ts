@@ -34,6 +34,36 @@ async function state(page: Page, mode = "test") {
     mode,
   );
 }
+
+test("player text draft survives the one-second state refresh", async ({
+  page,
+}) => {
+  await page.route("**/api/player/state", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        runId: "test-run",
+        name: "Reena",
+        mode: "test",
+        state: "REACTIVATING",
+        safety: false,
+        acknowledged: false,
+        content: {
+          eventId: "new-line-reena",
+          title: "Schreib den Satz, der vorher nicht da war.",
+          text: "Ein Satz nur für diesen Abend.",
+          interaction: "text",
+          inputLabel: "Dein neuer Satz",
+        },
+      }),
+    });
+  });
+  await page.goto("/p");
+  const input = page.getByLabel("Dein neuer Satz");
+  await input.fill("Dieser Satz bleibt stehen.");
+  await page.waitForTimeout(2200);
+  await expect(input).toHaveValue("Dieser Satz bleibt stehen.");
+});
 async function cmd(
   page: Page,
   action: string,
